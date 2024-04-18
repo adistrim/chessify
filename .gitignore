@@ -1,0 +1,24 @@
+# Mac OS
+.DS_Store
+*.swp
+*.swo
+
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+package-lock.json
+
+# React
+build/
+dist/
+compiled/
+out/
+.env
+.env.*
+
+# VSCode
+.vscode/
+
+# Misc
+.idea/
