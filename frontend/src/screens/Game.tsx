@@ -13,7 +13,7 @@ export const GAME_OVER = "game_over";
 export const Game = () => {
 
     const socket = useSocket();
-    const [chess, setChess] = useState(new Chess())
+    const [chess] = useState(new Chess())
     const [board, setBoard] = useState(chess.board());
     const [started, setStarted] = useState(false);
 
@@ -43,7 +43,7 @@ export const Game = () => {
         return () => {
             socket.onmessage = null;
         }
-    }, [socket]);
+    }, [chess, socket]);
 
     if (!socket) {
         return <div className="flex justify-center">
