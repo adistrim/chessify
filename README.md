@@ -12,11 +12,11 @@ Chessify is a scaled-down version of [chess.com](https://chess.com), offering us
 
 - **Express Backend**: Our backend server, built with Express.js, ensures a stable and efficient gaming environment.
 
-- **Vite@React Frontend**: Experience a seamless interface crafted with Vite and React, offering speed and responsiveness at every turn.
+- **Vite@React Frontend**
 
-- **Tailwind CSS for UI**: Immerse yourself in a visually stunning interface designed with Tailwind CSS, boasting a modern and polished aesthetic.
+- **Tailwind CSS for UI**: Superclean and easy to use UI components, thanks to Tailwind CSS.
 
-- **Websockets for Real-time Communication**: Stay connected with your opponent through websockets, allowing for instantaneous updates and a truly immersive gaming experience.
+- **Websockets for Real-time Communication**: Stay connected with your opponent through websockets, allowing for instantaneous updates.
 
 
 ## License
