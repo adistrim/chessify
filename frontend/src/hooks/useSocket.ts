@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react"
 
-const WS_URL: string = import.meta.env.VITE_WS_URL as string;
+// const WS_URL: string = import.meta.env.VITE_WS_URL as string;
+
+const WS_URL = "wss://difficult-bethena-adistrim.koyeb.app/"
 
 export const useSocket = () => {
     const [socket, setSocket] = useState<WebSocket | null>(null)
