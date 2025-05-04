@@ -1,16 +1,18 @@
 import { WebSocket } from "ws";
 import { v4 as uuidv4 } from "uuid";
 import { GameService } from "./GameService";
-import { Player, Move } from "../models/types";
-import { MESSAGE_TYPES } from "../models/constants";
+import { AIGameService } from "./AIGameService";
+import { AIPlayerOptions, Player, Move, InitAIGameMessage, MoveMessage } from "../models/types";
+import { MESSAGE_TYPES, GAME_TYPES } from "../models/constants";
 import { logger } from "../utils/logger";
 import { validateMessage } from "../utils/validators";
+import { config } from "../config";
 
 /**
  * Manages active games and matchmaking
  */
 export class GameManagerService {
-  private games: Map<string, GameService>;
+  private games: Map<string, GameService | AIGameService>;
   private players: Map<WebSocket, Player>;
   private waitingPlayer: Player | null = null;
   private cleanupInterval: NodeJS.Timeout | null = null;
@@ -22,7 +24,7 @@ export class GameManagerService {
     // Setup interval for cleanup of inactive games
     this.cleanupInterval = setInterval(
       () => this.cleanupInactiveGames(),
-      5 * 60 * 1000,
+      config.game.cleanupInterval,
     );
   }
 
@@ -100,17 +102,25 @@ export class GameManagerService {
         case MESSAGE_TYPES.INIT_GAME:
           this.handleInitGame(player);
           break;
+          
+        case MESSAGE_TYPES.INIT_AI_GAME:
+          let options: AIPlayerOptions = {};
+          
+          // Since we're using discriminated union with Zod, we can safely assert the message type
+          const aiGameMessage = validatedMessage as InitAIGameMessage;
+          
+          // Process AI game options if provided
+          if (aiGameMessage.payload && aiGameMessage.payload.options) {
+            options = aiGameMessage.payload.options;
+          }
+          
+          this.handleInitAIGame(player, options);
+          break;
 
         case MESSAGE_TYPES.MOVE:
-          // TypeScript needs to narrow the type before accessing payload
-          if (
-            "payload" in validatedMessage &&
-            "move" in validatedMessage.payload
-          ) {
-            this.handleMove(socket, validatedMessage.payload.move);
-          } else {
-            throw new Error("Invalid move message format");
-          }
+          // Again, with our discriminated union, we can safely assert the message type
+          const moveMessage = validatedMessage as MoveMessage;
+          this.handleMove(socket, moveMessage.payload.move);
           break;
 
         default:
@@ -139,7 +149,7 @@ export class GameManagerService {
   }
 
   /**
-   * Handle a request to initialize a new game
+   * Handle a request to initialize a new game with another human player
    */
   private handleInitGame(player: Player): void {
     if (this.waitingPlayer) {
@@ -148,11 +158,37 @@ export class GameManagerService {
       this.games.set(game.getGameState().id, game);
       this.waitingPlayer = null;
 
-      logger.info("New game created between waiting players");
+      logger.info("New human vs human game created between waiting players");
     } else {
       // No one waiting, this player becomes the waiting player
       this.waitingPlayer = player;
-      logger.info(`Player ${player.id} is waiting for an opponent`);
+      logger.info(`Player ${player.id} is waiting for a human opponent`);
+    }
+  }
+
+  /**
+   * Handle a request to initialize a new game with an AI opponent
+   */
+  private handleInitAIGame(player: Player, options: AIPlayerOptions): void {
+    try {
+      // Start a new game with AI
+      const aiGame = new AIGameService(player, options);
+      this.games.set(aiGame.getGameState().id, aiGame);
+      
+      logger.info(`New AI game created for player ${player.id}`);
+    } catch (error) {
+      logger.error(`Failed to create AI game for player ${player.id}:`, error);
+      
+      // Send error back to client
+      player.socket.send(
+        JSON.stringify({
+          type: MESSAGE_TYPES.ERROR,
+          payload: {
+            code: "ai_initialization_failed",
+            message: "Failed to initialize AI game. Please try again.",
+          },
+        })
+      );
     }
   }
 
@@ -161,7 +197,7 @@ export class GameManagerService {
    */
   private handleMove(socket: WebSocket, move: Move): void {
     // Find which game this player is part of
-    let playerGame: GameService | undefined;
+    let playerGame: GameService | AIGameService | undefined;
 
     for (const game of this.games.values()) {
       const state = game.getGameState();
@@ -185,8 +221,16 @@ export class GameManagerService {
       return;
     }
 
-    // Process the move
-    const gameOver = playerGame.makeMove(socket, move);
+    // Process the move based on game type
+    let gameOver = false;
+    
+    if (playerGame instanceof AIGameService) {
+      // Handle move in AI game
+      gameOver = playerGame.makeHumanMove(move);
+    } else {
+      // Handle move in regular human vs human game
+      gameOver = playerGame.makeMove(socket, move);
+    }
 
     // If game is over, clean it up
     if (gameOver) {
@@ -201,7 +245,7 @@ export class GameManagerService {
    */
   private cleanupInactiveGames(): void {
     const now = new Date();
-    const inactivityThreshold = 30 * 60 * 1000; // 30 minutes in ms
+    const inactivityThreshold = config.game.inactivityTimeout;
 
     for (const [gameId, game] of this.games.entries()) {
       const state = game.getGameState();
@@ -215,6 +259,29 @@ export class GameManagerService {
         this.games.delete(gameId);
       }
     }
+  }
+
+  /**
+   * Get stats about current games
+   */
+  public getStats(): { totalGames: number, humanGames: number, aiGames: number } {
+    let humanGames = 0;
+    let aiGames = 0;
+    
+    for (const game of this.games.values()) {
+      const state = game.getGameState();
+      if (state.gameType === GAME_TYPES.HUMAN_VS_HUMAN) {
+        humanGames++;
+      } else {
+        aiGames++;
+      }
+    }
+    
+    return {
+      totalGames: this.games.size,
+      humanGames,
+      aiGames
+    };
   }
 
   /**

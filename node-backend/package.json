@@ -1,12 +1,13 @@
 {
   "name": "backend",
-  "version": "1.0.0",
+  "version": "1.5.0",
   "description": "",
   "main": "index.js",
   "scripts": {
     "start": "tsc -b && node ./dist/index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "tsc"
+    "build": "tsc",
+    "postinstall": "node -e \"console.log('\\nIMPORTANT: Make sure to install Stockfish chess engine on your system.\\nSee https://stockfishchess.org/download/ for installation instructions.\\n')\""
   },
   "keywords": [],
   "author": "",

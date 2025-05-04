@@ -5,6 +5,7 @@ import { z } from "zod";
 export interface Player {
   socket: WebSocket;
   id: string; // Unique identifier for the player
+  isAI?: boolean; // Whether this player is an AI
 }
 
 // Game
@@ -16,6 +17,14 @@ export interface GameState {
   startTime: Date;
   endTime?: Date;
   winner?: string;
+  gameType: string; // Type of game (human vs human or human vs AI)
+}
+
+// AI Player Options
+export interface AIPlayerOptions {
+  skillLevel?: number; // AI skill level (0-20)
+  searchDepth?: number; // Search depth for the AI (1-20)
+  color?: string; // Color the AI plays as (default: random)
 }
 
 // Move
@@ -32,6 +41,17 @@ export const InitGameMessageSchema = z.object({
   type: z.literal("init_game"),
 });
 
+export const InitAIGameMessageSchema = z.object({
+  type: z.literal("init_ai_game"),
+  payload: z.object({
+    options: z.object({
+      skillLevel: z.number().min(0).max(20).optional(),
+      searchDepth: z.number().min(1).max(20).optional(),
+      color: z.enum(["white", "black"]).optional(),
+    }).optional(),
+  }),
+});
+
 export const MoveMessageSchema = z.object({
   type: z.literal("move"),
   payload: z.object({
@@ -40,11 +60,13 @@ export const MoveMessageSchema = z.object({
 });
 
 export type InitGameMessage = z.infer<typeof InitGameMessageSchema>;
+export type InitAIGameMessage = z.infer<typeof InitAIGameMessageSchema>;
 export type MoveMessage = z.infer<typeof MoveMessageSchema>;
 
 // Combined message type
 export const MessageSchema = z.discriminatedUnion("type", [
   InitGameMessageSchema,
+  InitAIGameMessageSchema,
   MoveMessageSchema,
 ]);
 
@@ -55,6 +77,7 @@ export interface GameInitResponse {
   type: string;
   payload: {
     color: string;
+    gameType: string;
   };
 }
 

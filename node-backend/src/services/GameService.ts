@@ -2,11 +2,11 @@ import { Chess } from "chess.js";
 import { WebSocket } from "ws";
 import { v4 as uuidv4 } from "uuid";
 import { GameState, Move, Player } from "../models/types";
-import { COLORS, GAME_STATUS, MESSAGE_TYPES } from "../models/constants";
+import { COLORS, GAME_STATUS, GAME_TYPES, MESSAGE_TYPES } from "../models/constants";
 import { logger } from "../utils/logger";
 
 /**
- * Manages a single chess game instance
+ * Manages a single chess game instance between two human players
  */
 export class GameService {
   private id: string;
@@ -31,6 +31,7 @@ export class GameService {
       type: MESSAGE_TYPES.INIT_GAME,
       payload: {
         color: COLORS.WHITE,
+        gameType: GAME_TYPES.HUMAN_VS_HUMAN
       },
     });
 
@@ -38,18 +39,19 @@ export class GameService {
       type: MESSAGE_TYPES.INIT_GAME,
       payload: {
         color: COLORS.BLACK,
+        gameType: GAME_TYPES.HUMAN_VS_HUMAN
       },
     });
 
     logger.info(
-      `Game ${this.id} started between players ${player1.id} and ${player2.id}`,
+      `Human game ${this.id} started between players ${player1.id} and ${player2.id}`,
     );
   }
 
   /**
    * Process a move from one of the players
    *
-   * @param socketId ID of the player making the move
+   * @param socket WebSocket of the player making the move
    * @param move The move to make
    * @returns true if game is over after this move
    */
@@ -77,7 +79,7 @@ export class GameService {
       // Attempt to make the move on the chess board
       this.chess.move(move);
     } catch (error) {
-      logger.warn(`Invalid move attempt in game ${this.id}:`, move);
+      logger.warn(`Invalid move attempt in human game ${this.id}:`, move);
       this.sendToPlayer(socket, {
         type: MESSAGE_TYPES.ERROR,
         payload: {
@@ -118,6 +120,7 @@ export class GameService {
       startTime: this.startTime,
       endTime: this.endTime,
       winner: this.winner,
+      gameType: GAME_TYPES.HUMAN_VS_HUMAN,
     };
   }
 
@@ -152,7 +155,7 @@ export class GameService {
     this.sendToPlayer(this.player1.socket, gameOverMessage);
     this.sendToPlayer(this.player2.socket, gameOverMessage);
 
-    logger.info(`Game ${this.id} ended. Winner: ${this.winner || "none"}`);
+    logger.info(`Human game ${this.id} ended. Winner: ${this.winner || "none"}`);
   }
 
   /**
@@ -181,7 +184,7 @@ export class GameService {
     this.status = GAME_STATUS.COMPLETED;
     this.endTime = new Date();
 
-    logger.info(`Player disconnected from game ${this.id}. Game ended.`);
+    logger.info(`Player disconnected from human game ${this.id}. Game ended.`);
   }
 
   /**
