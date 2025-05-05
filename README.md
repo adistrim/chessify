@@ -1,24 +1,21 @@
 # Chessify
 
-Chessify is a scaled-down version of [chess.com](https://chess.com), offering users the opportunity to play chess anonymously with others. Players simply need to stay ready in the queue, and when another player joins, their game begins.
+Chessify is a minimalist chess platform allowing instant anonymous gameplay. Join the queue and get matched with the next player who joins - quick and simple kind of like Omegle, but for chess!
+
+Visit the site: [chessify.adistrim.in](https://chessify.adistrim.in)
 
 ## Features
 
-- **Anonymous Chess Gameplay**: Dive straight into the action without the hassle of creating an account or disclosing personal information.
+- **Simple Matchmaking**: Play against whoever joins the queue next, no account needed
+- **AI Opponent**: Play with the Stockfish engine with adjustable difficulty (0-20)
 
-- **Real-time Matchmaking**: Instantly pair up with other players waiting in the queue, ensuring minimal downtime and maximum enjoyment.
+## Tech Stack
 
-- **Chess.js Integration**: Powered by the robust chess.js library, expect nothing less than precise and dependable game mechanics.
+- Frontend: React with Vite, Tailwind CSS (deployed on Vercel)
+- Backend: Express.js (deployed on AWS EC2)
 
-- **Express Backend**: Our backend server, built with Express.js, ensures a stable and efficient gaming environment.
-
-- **Vite@React Frontend**
-
-- **Tailwind CSS for UI**: Superclean and easy to use UI components, thanks to Tailwind CSS.
-
-- **Websockets for Real-time Communication**: Stay connected with your opponent through websockets, allowing for instantaneous updates.
-
+> **Note**: The backend may occasionally be offline as it costs money to keep running. If you want to know more about the platform or would like to use it when it's offline, Please [contact araj@adistrim.in](mailto:araj@adistrim.in)
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](https://www.mit.edu/~amini/LICENSE.md) for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) for details.
