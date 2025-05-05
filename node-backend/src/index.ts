@@ -1,31 +1,51 @@
+import dotenv from "dotenv";
+dotenv.config();
+
 import { WebSocketServer } from "ws";
 import { GameManagerService } from "./services/GameManagerService";
 import { config } from "./config";
 import { logger } from "./utils/logger";
 import https from "https";
+import http from "http";
 import fs from "fs";
 
-const privateKeyPath =
-  "/etc/letsencrypt/live/api.chessify.adistrim.in/privkey.pem";
-const certificatePath =
-  "/etc/letsencrypt/live/api.chessify.adistrim.in/fullchain.pem";
+const isProduction = process.env.NODE_ENV === "production";
 
-const privateKey = fs.readFileSync(privateKeyPath);
-const certificate = fs.readFileSync(certificatePath);
+let server;
 
-const httpsServer = https.createServer({
-  key: privateKey,
-  cert: certificate,
-});
+if (isProduction) {
+  const privateKeyPath =
+    "/etc/letsencrypt/live/api.chessify.adistrim.in/privkey.pem";
+  const certificatePath =
+    "/etc/letsencrypt/live/api.chessify.adistrim.in/fullchain.pem";
+
+  try {
+    const privateKey = fs.readFileSync(privateKeyPath);
+    const certificate = fs.readFileSync(certificatePath);
+    server = https.createServer({
+      key: privateKey,
+      cert: certificate,
+    });
+    logger.info("Using HTTPS server with Let's Encrypt certificates");
+  } catch (error: any) {
+    logger.error(`Failed to load SSL certificates: ${error.message}`);
+    process.exit(1);
+  }
+} else {
+  server = http.createServer();
+  logger.info("Using HTTP server for development (ws://)");
+}
 
 const wss = new WebSocketServer({
-  server: httpsServer,
+  server,
 });
 
 const gameManager = new GameManagerService();
 
 wss.on("connection", (socket) => {
-  logger.info("New WebSocket connection established (WSS)");
+  logger.info(
+    `New WebSocket connection established (${isProduction ? "WSS" : "WS"})`,
+  );
   gameManager.handleConnection(socket);
   socket.on("close", () => {
     logger.info("WebSocket connection closed");
@@ -41,8 +61,8 @@ const handleShutdown = () => {
   gameManager.shutdown();
   wss.close(() => {
     logger.info("WebSocket server closed");
-    httpsServer.close(() => {
-      logger.info("HTTPS server closed");
+    server.close(() => {
+      logger.info("Server closed");
       process.exit(0);
     });
   });
@@ -51,7 +71,11 @@ const handleShutdown = () => {
 process.on("SIGINT", handleShutdown);
 process.on("SIGTERM", handleShutdown);
 
-const wssPort = config.server.port || 8080;
-httpsServer.listen(wssPort, config.server.host, () => {
-  logger.info(`WebSocket server started on WSS port ${wssPort}`);
+const wssPort = config.server.port;
+const wssHost = config.server.host || "0.0.0.0";
+
+server.listen(wssPort, wssHost, () => {
+  logger.info(
+    `WebSocket server started on ${isProduction ? "wss" : "ws"}://${wssHost}:${wssPort}`,
+  );
 });
