@@ -13,7 +13,9 @@ export const useSocket = () => {
     ws.onclose = () => {
       setSocket(null);
     };
-    setSocket(ws);
+    ws.onerror = () => {
+      setSocket(null);
+    };
     return () => {
       ws.close();
     };
